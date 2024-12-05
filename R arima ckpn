@@ -1,0 +1,275 @@
+rm(list=ls())
+graphics.off()
+
+
+library(TSA)
+library(forecast)
+library(tseries)
+library(readxl)
+library(ggplot2)
+
+#import data
+data <- ckpn0
+
+df <- data.frame(month=as.Date(data$month),ckpn=data$ckpn)
+head(df)
+
+#Create time series plot
+p <- ggplot(df,aes(x=month, y=ckpn))+
+  geom_line(color="black",size=1)+
+  theme_minimal()+
+  labs(x="Month", y="CKPN",
+       title="Monthly CKPN")+
+  theme(plot.title=element_text(hjust=0.5, size=15, face="bold"))
+p + scale_x_date(date_labels="%b %Y")+
+  theme(axis.text.x=element_text(angle=50,hjust=1))
+
+#stationary check
+adf.test(data$ckpn)
+plot.ts(data$ckpn, xlab="Month", ylab="ckpn",
+        main="ckpn0")
+
+#1st differencing
+df1=diff(data$ckpn)
+adf.test(df1)
+plot.ts(df1, xlab="Week", ylab="Price",
+        main="First Differencing MA Stock Price")
+
+
+#finding order p and q
+pacf(df1,5) #p=1,4
+acf(df1,5) #q=1,2,3
+
+#2nd differencing
+df2=diff(df1)
+adf.test(df2)
+plot.ts(df2, xlab="Week", ylab="Price",
+        main="Second Differencing MA Stock Price")
+
+#finding order p and q
+pacf(df2,5) #p=1,4
+acf(df2,5) #q=1,4
+
+
+
+#modelling
+model1= Arima(data$ckpn,order=c(1,1,1))
+model2= Arima(data$ckpn,order=c(1,1,2))
+model3= Arima(data$ckpn,order=c(1,1,3))
+model4= Arima(data$ckpn,order=c(4,1,1))
+model5= Arima(data$ckpn,order=c(4,1,2))
+model6= Arima(data$ckpn,order=c(4,1,3))
+model7= Arima(data$ckpn,order=c(1,2,1))
+model8= Arima(data$ckpn,order=c(4,2,1))
+model9= Arima(data$ckpn,order=c(1,2,4))
+model10= Arima(data$ckpn,order=c(4,2,4)) #l
+model11= Arima(data$ckpn,order=c(0,2,4)) 
+model12= Arima(data$ckpn,order=c(3,1,0))
+model13= Arima(data$ckpn,order=c(1,1,0))
+model14= Arima(data$ckpn,order=c(2,1,0))
+model15= Arima(data$ckpn,order=c(3,1,0))
+
+summary(model1)
+summary(model2)
+summary(model3)
+summary(model4)
+summary(model5)
+summary(model6)
+summary(model7)
+summary(model8)
+summary(model9)
+summary(model10)
+summary(model11)
+summary(model12)
+summary(model13)
+summary(model14)
+summary(model15)
+
+#Residual Analysis
+#Shapiro-Wilk Test, accepted if > 0.05
+shapiro.test(residuals(model1))
+shapiro.test(residuals(model2))
+shapiro.test(residuals(model3))
+shapiro.test(residuals(model4))
+shapiro.test(residuals(model5))
+shapiro.test(residuals(model6))
+shapiro.test(residuals(model7))
+shapiro.test(residuals(model8))
+shapiro.test(residuals(model9))
+shapiro.test(residuals(model10))
+shapiro.test(residuals(model11))
+shapiro.test(residuals(model12))
+shapiro.test(residuals(model13))
+shapiro.test(residuals(model14))
+shapiro.test(residuals(model15))
+
+
+
+#Box-Ljung Test
+Box.test(residuals(model1), type = "Ljung-Box")
+Box.test(residuals(model2), type = "Ljung-Box")
+Box.test(residuals(model3), type = "Ljung-Box")
+Box.test(residuals(model4), type = "Ljung-Box")
+Box.test(residuals(model5), type = "Ljung-Box")
+Box.test(residuals(model6), type = "Ljung-Box")
+Box.test(residuals(model7), type = "Ljung-Box")
+Box.test(residuals(model8), type = "Ljung-Box")
+Box.test(residuals(model9), type = "Ljung-Box")
+Box.test(residuals(model10), type = "Ljung-Box")
+Box.test(residuals(model11), type = "Ljung-Box")
+Box.test(residuals(model12), type = "Ljung-Box")
+Box.test(residuals(model13), type = "Ljung-Box")
+Box.test(residuals(model14), type = "Ljung-Box")
+Box.test(residuals(model15), type = "Ljung-Box")
+
+
+qqnorm(residuals(model3))
+qqline(residuals(model3))
+
+qqnorm(residuals(model8))
+qqline(residuals(model8))
+
+qqnorm(residuals(model9))
+qqline(residuals(model9))
+
+qqnorm(residuals(model10))
+qqline(residuals(model10))
+
+
+#acf(residuals(model1),100)
+#pacf(residuals(model1),50)
+
+acf(residuals(model8))
+pacf(residuals(model8))
+
+#forecasting
+#MODEL 3
+frc=stats::arima(data$ckpn, order=c(1,1,3)) #model 3, best
+fcast=forecast(frc, h=12, level= c(95))
+plot(fcast)
+fcast
+model3 <- Arima(data$ckpn, order = c(1, 1, 3))
+predicted <- fitted(model3)
+plot(df$month, df$ckpn, type = "l", col = "blue", lwd = 2, 
+     main = "Actual vs Predicted Model 3 (3.54%)", 
+     xlab = " ", ylab = " ", xaxt = "n", las = 1) # 
+lines(df$month, predicted, col = "red", lwd = 2)
+axis(1, at = df$month, labels = format(df$month, "%b-%Y"), las = 2, cex.axis = 0.8)
+grid(nx = NA, ny = NULL, col = "gray", lty = "dotted", lwd = 0.8)
+legend("topleft", legend = c("Actual", "Predicted"), 
+       col = c("blue", "red"), lwd = 2, bty = "n", cex = 0.8)
+
+#
+frc=stats::arima(data$ckpn, order=c(4,2,1)) #model 8, best
+fcast=forecast(frc, h=12, level= c(95))
+plot(fcast)
+fcast
+model8 <- Arima(df$ckpn, order = c(4, 2, 1))
+predicted <- fitted(model8)
+plot(df$month, df$ckpn, type = "l", col = "blue", lwd = 2, 
+     main = "Actual vs Predicted Model 8 (3.75%)", 
+     xlab = " ", ylab = " ", xaxt = "n", las = 1) # 
+lines(df$month, predicted, col = "red", lwd = 2)
+axis(1, at = df$month, labels = format(df$month, "%b-%Y"), las = 2, cex.axis = 0.8)
+grid(nx = NA, ny = NULL, col = "gray", lty = "dotted", lwd = 0.8)
+legend("topleft", legend = c("Actual", "Predicted"), 
+       col = c("blue", "red"), lwd = 2, bty = "n", cex = 0.8)
+
+#Model 9
+frc=stats::arima(data$ckpn, order=c(1,2,4)) #model 9, best
+fcast=forecast(frc, h=12, level= c(95))
+plot(fcast)
+fcast
+model9 <- Arima(df$ckpn, order = c(1, 2, 4))
+predicted <- fitted(model9)
+plot(df$month, df$ckpn, type = "l", col = "blue", lwd = 2, 
+     main = "Actual vs Predicted Model 9 (3.43%)", 
+     xlab = " ", ylab = " ", xaxt = "n", las = 1) # 
+lines(df$month, predicted, col = "red", lwd = 2)
+axis(1, at = df$month, labels = format(df$month, "%b-%Y"), las = 2, cex.axis = 0.8)
+grid(nx = NA, ny = NULL, col = "gray", lty = "dotted", lwd = 0.8)
+legend("topleft", legend = c("Actual", "Predicted"), 
+       col = c("blue", "red"), lwd = 2, bty = "n", cex = 0.8)
+
+#Model 10
+frc=stats::arima(data$ckpn, order=c(4,2,4)) #model 10, best
+fcast=forecast(frc, h=12, level= c(95))
+plot(fcast)
+fcast
+model10 <- Arima(df$ckpn, order = c(4,2,4))
+predicted <- fitted(model1)
+plot(df$month, df$ckpn, type = "l", col = "blue", lwd = 2, 
+     main = "Actual vs Predicted Model 10 (3.34%)", 
+     xlab = " ", ylab = " ", xaxt = "n", las = 1) # 
+lines(df$month, predicted, col = "red", lwd = 2)
+axis(1, at = df$month, labels = format(df$month, "%b-%Y"), las = 2, cex.axis = 0.8)
+grid(nx = NA, ny = NULL, col = "gray", lty = "dotted", lwd = 0.8)
+legend("topleft", legend = c("Actual", "Predicted"), 
+       col = c("blue", "red"), lwd = 2, bty = "n", cex = 0.8)
+
+
+
+###
+frc_log <- fcast
+fcast_log <- forecast(frc_log, h=3, level= c(95))
+
+hist(fcast_log$mean, breaks = 20, main = "Histogram Forecast Log Harga Saham", xlab = "Forecast Log Harga Saham")
+
+
+
+frc=stats::arima(data$ckpn, order=c(1,1,2)) #model 1
+fcast=forecast(frc, h=10, level= c(90))
+plot(fcast)
+fcast
+
+frc=stats::arima(data$Close, order=c(2,2,1))
+fcast=forecast(frc, h=10, level= c(90))
+plot(fcast)
+fcast
+
+frc=stats::arima(data$Close, order=c(1,2,0))
+fcast=forecast(frc, h=10, level= c(90))
+plot(fcast)
+fcast
+
+frc=stats::arima(data$Close, order=c(2,2,0))
+fcast=forecast(frc, h=10, level= c(90))
+plot(fcast)
+fcast
+
+acf(residuals(model3))
+pacf(residuals(model3))
+
+###############################################
+
+# instal package
+install.packages("ggplot2")
+library(ggplot2)
+
+# import actual data
+actual_data <- actual$Close
+
+# combined actual data and fcast3
+combined_data <- data.frame(Time = 1:length(actual_data), Actual = actual_data, Forecast = fcast3$mean)
+
+# create the plot
+ggplot(combined_data, aes(x = Time)) +
+  geom_line(aes(y = Actual), color = "black") +
+  geom_line(aes(y = Forecast), color = "red") +
+  labs(x = "Time", y = "Value") +
+  scale_x_continuous(breaks = seq(1, length(actual_data), by = 1), labels = rownames(combined_data)) +
+  theme_minimal()
+
+
+
+
+
+#----------------------------------------------#
+
+#Models with smallest MSE and AIC are model 5 and 15
+residuals <- residuals(model6)
+plot(residuals, type="o", main = "Plot of ARIMA Residuals")
+abline(h=0)
+
+acf(residuals(model6),100)
+pacf(residuals(model6),50)
